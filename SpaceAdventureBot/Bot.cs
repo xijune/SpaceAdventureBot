@@ -11,7 +11,7 @@ namespace SpaceAdventureBot
         private const double DefaultConfidenceThreshold = 0.8;
         private const double HighConfidenceThreshold = 0.98;
         private const int TapSleepDuration = 2000;
-        private const int LaunchTimeout = 15000;
+        private const int DefaultTimeout = 15000;
 
         private Device Device { get; set; }
 
@@ -39,15 +39,11 @@ namespace SpaceAdventureBot
                     }
                     //Device.Screenshot();
                     //return;
-                    AntiBot();
+                    
                     DailyActivity();
-                    AntiBot();
                     Fuel();
-                    AntiBot();
                     Shield();
-                    AntiBot();
                     CollectCoin();
-                    AntiBot();
                     Spin();
 
                     Console.WriteLine("Closing Telegram...");
@@ -67,11 +63,12 @@ namespace SpaceAdventureBot
 
         private bool DailyActivity()
         {
+            AntiBot();
             Console.WriteLine("Checking for daily activity...");
             if (FindMatchOnScreenWithTimeout("DailyActivity", 5000) != null)
             {
                 Console.WriteLine("Daily activity is available");
-                if (FindWhileScrollingWithTimeout("DailyActivityDoubleReward", Constants.DailyActivityScrollRegion, 15000))
+                if (FindWhileScrollingWithTimeout("DailyActivityDoubleReward", Constants.DailyActivityScrollRegion, DefaultTimeout))
                 {
                     while (!IsMatchOnScreen("DailyActivity"))
                         continue;
@@ -100,14 +97,14 @@ namespace SpaceAdventureBot
                 return true;
             }
 
-            Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout("SpaceAdventureBot", LaunchTimeout);
+            Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout("SpaceAdventureBot", DefaultTimeout);
             if (spaceAdventureRegion != null)
             {
                 Console.WriteLine("Opening Space Adventure...");
-                if (FindAndTapWithTimeout("OpenSpaceAdventureBot", LaunchTimeout, spaceAdventureRegion))
+                if (FindAndTapWithTimeout("OpenSpaceAdventureBot", DefaultTimeout, spaceAdventureRegion))
                 {
                     Console.WriteLine("Starting Space Adventure...");
-                    return FindAndTapWithTimeout("StartButton", LaunchTimeout);
+                    return FindAndTapWithTimeout("StartButton", DefaultTimeout);
                 }
             }
             Console.WriteLine("Failed to launch Space Adventure");
@@ -116,12 +113,14 @@ namespace SpaceAdventureBot
 
         private void CollectCoin()
         {
+            AntiBot();
             if (FindAndTap("CollectButton"))
                 Console.WriteLine("Collecting coin...");
         }
 
         private void Fuel()
         {
+            AntiBot();
             if (!IsFuelEmpty())
             {
                 Console.WriteLine("Fuel is not empty, no need to fill.");
@@ -162,6 +161,7 @@ namespace SpaceAdventureBot
 
         private void Shield()
         {
+            AntiBot();
             if (!IsShielBroken())
             {
                 Console.WriteLine("Shield is not broken, no need to repair.");
@@ -204,6 +204,7 @@ namespace SpaceAdventureBot
 
         private void Spin()
         {
+            AntiBot();
             if (FindAndTap("Spin"))
             {
                 Console.WriteLine("Spin button tapped.");
@@ -258,31 +259,68 @@ namespace SpaceAdventureBot
 
         private Point? FindMatchOnScreen(string imagePath, double confidenceThreshold = DefaultConfidenceThreshold, Rect? region = null)
         {
-            Device.Screenshot();
+            const int maxRetries = 3;
+            const int delayBetweenRetries = 500;
 
-            using var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color);
-            using var templateImage = Cv2.ImRead($"images/{imagePath}.png", ImreadModes.Color);
-
-            if (mainImage.Empty() || templateImage.Empty())
+            for (int attempt = 0; attempt < maxRetries; attempt++)
             {
-                Console.WriteLine("Error: Could not load images.");
-                return null;
+                try
+                {
+                    Device.Screenshot();
+
+                    using (var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color))
+                    using (var templateImage = Cv2.ImRead($"images/{imagePath}.png", ImreadModes.Color))
+                    {
+                        if (mainImage.Empty() || templateImage.Empty())
+                        {
+                            Console.WriteLine("Error: Could not load images.");
+                            return null;
+                        }
+
+                        using (var searchImage = region.HasValue ? new Mat(mainImage, region.Value) : mainImage)
+                        using (var result = new Mat())
+                        {
+                            Cv2.MatchTemplate(searchImage, templateImage, result, TemplateMatchModes.CCoeffNormed);
+                            Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out Point maxLoc);
+
+                            if (maxVal < confidenceThreshold)
+                                return null;
+
+                            int centerX = (region?.X ?? 0) + maxLoc.X + templateImage.Width / 2;
+                            int centerY = (region?.Y ?? 0) + maxLoc.Y + templateImage.Height / 2;
+
+                            Console.WriteLine($"Match found at: Top-Left={maxLoc}, Center=({centerX}, {centerY}) with confidence {maxVal}");
+                            return new Point(centerX, centerY);
+                        }
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"IO Error: {ex.Message}");
+                    if (attempt < maxRetries - 1)
+                    {
+                        Console.WriteLine("Retrying...");
+                        Thread.Sleep(delayBetweenRetries);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Max retries reached. Unable to access the file.");
+                        return null;
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine($"Access Error: {ex.Message}");
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Unexpected Error: {ex.Message}");
+                    return null;
+                }
             }
 
-            using var searchImage = region.HasValue ? new Mat(mainImage, region.Value) : mainImage;
-
-            using var result = new Mat();
-            Cv2.MatchTemplate(searchImage, templateImage, result, TemplateMatchModes.CCoeffNormed);
-            Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out Point maxLoc);
-
-            if (maxVal < confidenceThreshold)
-                return null;
-
-            int centerX = (region?.X ?? 0) + maxLoc.X + templateImage.Width / 2;
-            int centerY = (region?.Y ?? 0) + maxLoc.Y + templateImage.Height / 2;
-
-            Console.WriteLine($"Match found at: Top-Left={maxLoc}, Center=({centerX}, {centerY}) with confidence {maxVal}");
-            return new Point(centerX, centerY);
+            return null;
         }
 
         private bool IsMatchOnScreen(string imagePath, Rect? region = null, double confidenceThreshold = DefaultConfidenceThreshold) => FindMatchOnScreen(imagePath, confidenceThreshold, region) != null;

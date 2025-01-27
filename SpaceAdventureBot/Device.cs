@@ -38,10 +38,30 @@ namespace SpaceAdventureBot
         public void Screenshot()
         {
             const string remotePath = "/sdcard/screenshot.png";
-            ExecuteCommand($"screencap -p {remotePath}");
-            using (SyncService service = new SyncService(AdbClient, DeviceData))
-            using (Stream stream = File.OpenWrite("screenshot.png"))
-                service.Pull(remotePath, stream, null, CancellationToken.None);
+            try
+            {
+                ExecuteCommand($"screencap -p {remotePath}");
+                using (SyncService service = new SyncService(AdbClient, DeviceData))
+                using (Stream stream = File.OpenWrite("screenshot.png"))
+                {
+                    service.Pull(remotePath, stream, null, CancellationToken.None);
+                }
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"IO Error: {ex.Message}");
+                // Additional logging or handling for IO errors
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Access Error: {ex.Message}");
+                // Additional logging or handling for access errors
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected Error: {ex.Message}");
+                // Additional logging or handling for unexpected errors
+            }
         }
 
         /// <summary>
