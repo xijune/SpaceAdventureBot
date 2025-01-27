@@ -68,3 +68,17 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - [OpenCvSharp](https://github.com/shimat/opencvsharp) for image recognition.
 - [SharpAdbClient](https://github.com/quamotion/madb) for ADB interactions.
+
+## TODO
+
+- **Improve Image Recognition**: Enhance the accuracy and speed of image recognition using advanced techniques or pre-trained models.
+- **Error Handling**: Implement more robust error handling and logging mechanisms to capture and address issues during bot execution.
+- **Configuration Management**: Create a configuration file to manage constants and settings, making it easier to adjust parameters without modifying the code.
+- **Unit Tests**: Develop unit tests for critical functions to ensure reliability and facilitate future development.
+- **Multi-Device Support**: Extend support for multiple devices running the bot simultaneously.
+- **User Interface**: Develop a simple user interface to start, stop, and monitor the bot's activities.
+- **Documentation**: Expand the documentation to include detailed setup instructions, usage examples, and troubleshooting tips.
+- **Performance Optimization**: Optimize the bot's performance to reduce resource usage and improve execution speed.
+- **Feature Expansion**: Add new features to interact with other aspects of the Space Adventure game or additional games within the Telegram app.
+- **Security Enhancements**: Ensure the bot operates securely, protecting user data and preventing unauthorized access.
+
