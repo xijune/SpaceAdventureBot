@@ -25,16 +25,28 @@ SpaceAdventureBot is an automated bot designed to interact with the Space Advent
 
 ## Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
+    `git clone https://github.com/xijune/SpaceAdventureBot.git`
 
-    git clone https://github.com/yourusername/SpaceAdventureBot.git
-    cd SpaceAdventureBot
+2. **Open the solution**:
+    - Open the `SpaceAdventureBot.sln` file in Visual Studio 2022.
 
-2. Open the solution in Visual Studio 2022.
+3. **Restore the NuGet packages**:
+    `dotnet restore`
 
-3. Restore the NuGet packages:
-    
-    dotnet restore
+4. **Install Android Debug Bridge (adb)**:
+    - Download the ADB platform tools from the official site:
+      [Download ADB](https://dl.google.com/android/repository/platform-tools-latest-windows.zip?hl=fr)
+    - Extract the downloaded zip file.
+
+5. **Set up ADB**:
+    - Rename the extracted folder to `adb`.
+    - Move the `adb` folder to the root of your `C:` drive (i.e., `C:\adb`).
+
+6. **Verify ADB installation**:
+    - Open a command prompt and run:
+        `C:\adb\adb.exe version`
+    - Ensure that the ADB version is displayed, confirming the installation.
 
 ## Configuration
 
@@ -45,8 +57,7 @@ Ensure that your Android device is connected and ADB is enabled. Modify the `Con
 1. Connect your Android device via USB and ensure ADB is enabled.
 
 2. Run the bot:
-    
-    dotnet run --project SpaceAdventureBot
+    `dotnet run --project SpaceAdventureBot`
 
 3. The bot will start the Telegram app, launch the Space Adventure game, and perform the automated tasks.
 
@@ -68,3 +79,17 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - [OpenCvSharp](https://github.com/shimat/opencvsharp) for image recognition.
 - [SharpAdbClient](https://github.com/quamotion/madb) for ADB interactions.
+
+## TODO
+
+- **Improve Image Recognition**: Enhance the accuracy and speed of image recognition using advanced techniques or pre-trained models.
+- **Error Handling**: Implement more robust error handling and logging mechanisms to capture and address issues during bot execution.
+- **Configuration Management**: Create a configuration file to manage constants and settings, making it easier to adjust parameters without modifying the code.
+- **Unit Tests**: Develop unit tests for critical functions to ensure reliability and facilitate future development.
+- **Multi-Device Support**: Extend support for multiple devices running the bot simultaneously.
+- **User Interface**: Develop a simple user interface to start, stop, and monitor the bot's activities.
+- **Documentation**: Expand the documentation to include detailed setup instructions, usage examples, and troubleshooting tips.
+- **Performance Optimization**: Optimize the bot's performance to reduce resource usage and improve execution speed.
+- **Feature Expansion**: Add new features to interact with other aspects of the Space Adventure game or additional games within the Telegram app.
+- **Security Enhancements**: Ensure the bot operates securely, protecting user data and preventing unauthorized access.
+
