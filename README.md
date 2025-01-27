@@ -25,16 +25,28 @@ SpaceAdventureBot is an automated bot designed to interact with the Space Advent
 
 ## Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
+    git clone https://github.com/xijune/SpaceAdventureBot.git
 
-    git clone https://github.com/yourusername/SpaceAdventureBot.git
-    cd SpaceAdventureBot
+2. **Open the solution**:
+    - Open the `SpaceAdventureBot.sln` file in Visual Studio 2022.
 
-2. Open the solution in Visual Studio 2022.
-
-3. Restore the NuGet packages:
-    
+3. **Restore the NuGet packages**:
     dotnet restore
+
+4. **Install Android Debug Bridge (adb)**:
+    - Download the ADB platform tools from the official site:
+      [Download ADB](https://dl.google.com/android/repository/platform-tools-latest-windows.zip?hl=fr)
+    - Extract the downloaded zip file.
+
+5. **Set up ADB**:
+    - Rename the extracted folder to `adb`.
+    - Move the `adb` folder to the root of your `C:` drive (i.e., `C:\adb`).
+
+6. **Verify ADB installation**:
+    - Open a command prompt and run:
+        C:\adb\adb.exe version
+    - Ensure that the ADB version is displayed, confirming the installation.
 
 ## Configuration
 
@@ -45,7 +57,6 @@ Ensure that your Android device is connected and ADB is enabled. Modify the `Con
 1. Connect your Android device via USB and ensure ADB is enabled.
 
 2. Run the bot:
-    
     dotnet run --project SpaceAdventureBot
 
 3. The bot will start the Telegram app, launch the Space Adventure game, and perform the automated tasks.
