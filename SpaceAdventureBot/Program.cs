@@ -1,5 +1,4 @@
-﻿using OpenCvSharp;
-using SharpAdbClient;
+﻿using SharpAdbClient;
 using SpaceAdventureBot;
 
 class Program

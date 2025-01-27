@@ -41,10 +41,7 @@ namespace SpaceAdventureBot
             ExecuteCommand($"screencap -p {remotePath}");
             using (SyncService service = new SyncService(AdbClient, DeviceData))
             using (Stream stream = File.OpenWrite("screenshot.png"))
-            {
                 service.Pull(remotePath, stream, null, CancellationToken.None);
-            }
-            //ExecuteCommand($"rm {remotePath}");
         }
 
         /// <summary>
@@ -107,14 +104,10 @@ namespace SpaceAdventureBot
             while ((DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
                 if (IsAppInForeground(packageName))
-                {
-                    Console.WriteLine("App started");
                     return true;
-                }
                 Thread.Sleep(sleepInterval);
             }
 
-            Console.WriteLine("Failed to launch App");
             return false;
         }
 
