@@ -89,10 +89,7 @@ namespace SpaceAdventureBot
 
             var receiver = ExecuteCommand($"am start -n {packageName}/{activityName}");
             if (!receiver.ToString().Contains("Starting: Intent"))
-            {
-                Console.WriteLine("Command line failed to launch App.");
                 return false;
-            }
 
             return WaitForAppToStart(packageName);
         }

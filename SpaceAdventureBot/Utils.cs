@@ -44,5 +44,26 @@ namespace SpaceAdventureBot
             process.Start();
             return process;
         }
+
+        public static void Log(string message, LogType messageType)
+        {
+            switch (messageType)
+            {
+                case LogType.Info:
+                    Console.ForegroundColor = ConsoleColor.White;
+                    break;
+                case LogType.Warning:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case LogType.Error:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case LogType.Success:
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    break;
+            }
+            Console.WriteLine($"{DateTime.Now.ToString("G (fr-CH)")} | {message}");
+            Console.ResetColor();
+        }
     }
 }

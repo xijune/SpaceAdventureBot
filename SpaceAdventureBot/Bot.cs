@@ -9,15 +9,61 @@ namespace SpaceAdventureBot
         private const int MaxSleepMinutes = 14;
         private const int SleepDurationMultiplier = 60 * 1000;
         private const double DefaultConfidenceThreshold = 0.8;
-        private const double HighConfidenceThreshold = 0.98;
         private const int TapSleepDuration = 2000;
         private const int DefaultTimeout = 15000;
 
-        private Device Device { get; set; }
+        private Device _device;
+        private bool _isFuelEmpty;
+        private bool _isShieldBroken;
+        private DateTime _lastTimeForceFieldUsed;
+        private DateTime _lastTimeSpinned;
+        private int _spinCount;
 
         public Bot(AdbClient adbClient, DeviceData deviceData)
         {
-            Device = new Device(adbClient, deviceData);
+            _device = new Device(adbClient, deviceData);
+            _isFuelEmpty = false;
+            _isShieldBroken = false;
+            _lastTimeForceFieldUsed = DateTime.Now.AddMinutes(-60);
+            _lastTimeSpinned = DateTime.Now.AddMinutes(-10);
+            _spinCount = 0;
+        }
+
+        private void Daily()
+        {
+            AntiBot();
+            Utils.Log("Checking for daily activity...", LogType.Info);
+            if (IsMatchOnScreen(Constants.Daily))
+            {
+                Utils.Log("Daily activity found !", LogType.Info);
+                Utils.Log("Checking for double reward...", LogType.Info);
+                if (FindWhileScrollingWithTimeout(Constants.DailyAdDoubleReward, Constants.DailyActivityScrollRegion, DefaultTimeout))
+                {
+                    if (FindAndTap(Constants.DailyAdDoubleReward))
+                    {
+                        Utils.Log("Double reward found, watching ad...", LogType.Info);
+
+                        DateTime startTime = DateTime.Now;
+                        while ((DateTime.Now - startTime).TotalMilliseconds < 32000)
+                        {
+                            if (IsMatchOnScreen(Constants.Daily) || FindAndTap(Constants.AdFreeClose))
+                            {
+                                Utils.Log("Ad finished, double reward collected.", LogType.Success);
+                                break;
+                            }
+                            Thread.Sleep(500);
+                        }
+                        if (!IsMatchOnScreen(Constants.Daily))
+                            Utils.Log("Failed to collect double reward.", LogType.Error);
+                    }
+                }
+                if (FindAndTap(Constants.DailyClose))
+                    Utils.Log("Daily activity closed.", LogType.Info);
+                else
+                    Utils.Log("Failed to close daily activity.", LogType.Error);
+            }
+            else
+                Utils.Log("No daily activity found.", LogType.Info);
         }
 
         public void Start()
@@ -26,28 +72,51 @@ namespace SpaceAdventureBot
             {
                 try
                 {
-                    Console.WriteLine("Starting Telegram...");
-                    if (!Device.StartApp(Constants.TelegramPackageName, Constants.TelegramMainActivity))
-                        break;
-
-                    Console.WriteLine("Launching Space Adventure...");
-                    if (!LaunchSpaceAdventure())
+                    Utils.Log("Launching Telegram...", LogType.Info);
+                    if (!_device.StartApp(Constants.TelegramPackageName, Constants.TelegramMainActivity))
                     {
-                        Console.WriteLine("Failed to launch Space Adventure");
-                        Device.CloseApp(Constants.TelegramPackageName);
+                        Utils.Log("Failed to launch Telegram.", LogType.Error);
                         continue;
                     }
-                    //Device.Screenshot();
-                    //return;
-                    
-                    DailyActivity();
-                    Fuel();
-                    Shield();
-                    CollectCoin();
+
+                    if (FindMatchOnScreen(Constants.SpaceAdventure) == null)
+                    {
+                        if (!LaunchSpaceAdventure())
+                        {
+                            Utils.Log("Closing Telegram...", LogType.Warning);
+                            _device.CloseApp(Constants.TelegramPackageName);
+                            continue;
+                        }
+                    }
+
+                    Daily();
+
+                    if (!IsMatchOnScreen(Constants.HomeLanguage))
+                    {
+                        Utils.Log("Screen is not in home page.", LogType.Warning);
+                        if (!FindAndTap(Constants.NavHome))
+                        {
+                            Utils.Log("Failed to navigate to home page.", LogType.Error);
+                            _device.CloseApp(Constants.TelegramPackageName);
+                            continue;
+                        }
+                    }
+
                     Spin();
 
-                    Console.WriteLine("Closing Telegram...");
-                    Device.CloseApp(Constants.TelegramPackageName);
+                    _isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion);
+                    _isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion);
+
+                    CollectCoin();
+
+                    // TODO: Add check with lastTimeForceFieldUsed
+                    if (_isFuelEmpty || _isShieldBroken)
+
+                        Fuel();
+                    Shield();
+
+                    Utils.Log("Closing Telegram...", LogType.Info);
+                    _device.CloseApp(Constants.TelegramPackageName);
 
                     int sleepDuration = GetRandomSleepDuration();
                     Console.WriteLine($"Bot is sleeping for {sleepDuration / SleepDurationMultiplier} minutes.");
@@ -56,82 +125,53 @@ namespace SpaceAdventureBot
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error: {ex.Message}");
-                    Device.CloseApp(Constants.TelegramPackageName);
+                    _device.CloseApp(Constants.TelegramPackageName);
                 }
             }
-        }
-
-        private bool DailyActivity()
-        {
-            AntiBot();
-            Console.WriteLine("Checking for daily activity...");
-            if (FindMatchOnScreenWithTimeout("DailyActivity", 5000) != null)
-            {
-                Console.WriteLine("Daily activity is available");
-                if (FindWhileScrollingWithTimeout("DailyActivityDoubleReward", Constants.DailyActivityScrollRegion, DefaultTimeout))
-                {
-                    while (!IsMatchOnScreen("DailyActivity"))
-                        continue;
-                    return true;
-                }
-            }
-            Console.WriteLine("No daily activity found");
-            return false;
         }
 
         private void AntiBot()
         {
-            Rect? adPopUp = FindRegionOnScreen("AdPopUp");
-            if (adPopUp != null)
-            {
-                Console.WriteLine("Anti-bot measure detected, bypassing...");
-                FindAndTap("AdBypass", adPopUp);
-            }
+            if (FindAndTap(Constants.AntiBotClose))
+                Utils.Log("Anti-bot measure bypassed.", LogType.Success);
         }
 
         private bool LaunchSpaceAdventure()
         {
-            if (IsMatchOnScreen("SpaceAdventureLaunched"))
-            {
-                Console.WriteLine("Space Adventure already launched");
-                return true;
-            }
-
-            Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout("SpaceAdventureBot", DefaultTimeout);
+            Utils.Log("Launching Space Adventure...", LogType.Info);
+            Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout(Constants.SpaceAdventureRegion, DefaultTimeout);
             if (spaceAdventureRegion != null)
             {
-                Console.WriteLine("Opening Space Adventure...");
-                if (FindAndTapWithTimeout("OpenSpaceAdventureBot", DefaultTimeout, spaceAdventureRegion))
+                if (FindAndTap(Constants.SpaceAdventureOpen, spaceAdventureRegion))
                 {
-                    Console.WriteLine("Starting Space Adventure...");
-                    return FindAndTapWithTimeout("StartButton", DefaultTimeout);
+                    Utils.Log("Space Adventure game opened.", LogType.Info);
+                    if (FindAndTapWithTimeout(Constants.SpaceAdventureStart, DefaultTimeout))
+                    {
+                        Utils.Log("Game started.", LogType.Success);
+                        return true;
+                    }
                 }
             }
-            Console.WriteLine("Failed to launch Space Adventure");
+            Utils.Log("Failed to launch Space Adventure.", LogType.Error);
             return false;
         }
 
         private void CollectCoin()
         {
             AntiBot();
-            if (FindAndTap("CollectButton"))
-                Console.WriteLine("Collecting coin...");
+            if (FindAndTap(Constants.HomeCollect))
+                Utils.Log("Coin collected.", LogType.Success);
         }
 
         private void Fuel()
         {
             AntiBot();
-            if (!IsFuelEmpty())
-            {
-                Console.WriteLine("Fuel is not empty, no need to fill.");
-                return;
-            }
 
             Console.WriteLine("Fuel is empty, filling...");
             if (FindAndTap("Shop"))
             {
                 Console.WriteLine("Opened Shop.");
-                Device.Screenshot();
+                _device.Screenshot();
                 //var test = IsMatchOnScreen();
                 if (IsMatchOnScreen("FuelLogo"))
                 {
@@ -153,20 +193,9 @@ namespace SpaceAdventureBot
                 Console.WriteLine("Failed to open Shop.");
         }
 
-        private bool IsFuelEmpty()
-        {
-            Console.WriteLine("Checking if fuel is empty...");
-            return IsMatchOnScreen("Fuel", Constants.FuelRegion);
-        }
-
         private void Shield()
         {
             AntiBot();
-            if (!IsShielBroken())
-            {
-                Console.WriteLine("Shield is not broken, no need to repair.");
-                return;
-            }
 
             Console.WriteLine("Shield is broken, repairing...");
             if (FindAndTap("Shop"))
@@ -196,40 +225,48 @@ namespace SpaceAdventureBot
                 Console.WriteLine("Failed to open Shop.");
         }
 
-        private bool IsShielBroken()
-        {
-            Console.WriteLine("Checking if shield is broken...");
-            return IsMatchOnScreen("Shield", Constants.ShieldRegion);
-        }
-
         private void Spin()
         {
             AntiBot();
-            if (FindAndTap("Spin"))
+
+            if (FindAndTap(Constants.HomeSpin))
             {
-                Console.WriteLine("Spin button tapped.");
-                if (FindAndTap("SpinAd"))
+                if (IsMatchOnScreen(Constants.Spin))
                 {
-                    Console.WriteLine("Spin ad found, watching ad...");
-                    while (!FindAndTap("SpinButton"))
-                        FindAndTap("AdClose");
-
-                    Console.WriteLine("Spin button tapped, waiting for spin to complete...");
-                    while (!IsMatchOnScreen("SpinLogo"))
+                    Utils.Log("Spin button tapped.", LogType.Info);
+                    if (FindAndTap(Constants.SpinAdFree))
                     {
-                        AntiBot();
-                        continue;
-                    }
-                    Console.WriteLine("Spin completed.");
-                }
-                else
-                    Console.WriteLine("No spin ad found");
+                        _lastTimeSpinned = DateTime.Now;
+                        Utils.Log("Spin ad found, watching ad...", LogType.Info);
 
-                FindAndTap("CloseSpin");
-                Console.WriteLine("Spin closed.");
+                        DateTime startTime = DateTime.Now;
+                        while ((DateTime.Now - startTime).TotalMilliseconds < 32000)
+                        {
+                            if (IsMatchOnScreen(Constants.SpinSpin) || FindAndTap(Constants.AdFreeClose))
+                            {
+                                Utils.Log("Ad finished.", LogType.Info);
+                                break;
+                            }
+                            Thread.Sleep(500);
+                        }
+                        if (FindAndTap(Constants.SpinSpin))
+                        {
+                            Utils.Log("Spin button tapped, waiting for spin to complete...", LogType.Info);
+                            if (FindMatchOnScreenWithTimeout(Constants.Spin, DefaultTimeout) != null)
+                            {
+                                Utils.Log("Spin completed.", LogType.Success);
+                                _spinCount++;
+                            }
+                            else
+                                Utils.Log("Failed to complete spin.", LogType.Error);
+                        }
+                    }
+                    if (FindAndTap(Constants.SpinClose))
+                        Utils.Log("Spin page closed.", LogType.Info);
+                    else
+                        Utils.Log("Failed to close spin page.", LogType.Error);
+                }
             }
-            else
-                Console.WriteLine("Failed to find spin button.");
         }
 
         private bool FindAndTap(string templateImagePath, Rect? region = null)
@@ -239,7 +276,7 @@ namespace SpaceAdventureBot
                 return false;
 
             Console.WriteLine($"Tapping on {templateImagePath}...");
-            Device.Tap(match.Value);
+            _device.Tap(match.Value);
             Thread.Sleep(TapSleepDuration);
             return true;
         }
@@ -249,6 +286,7 @@ namespace SpaceAdventureBot
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
             {
+                AntiBot();
                 if (FindAndTap(templateImagePath, region))
                     return true;
 
@@ -266,14 +304,14 @@ namespace SpaceAdventureBot
             {
                 try
                 {
-                    Device.Screenshot();
+                    _device.Screenshot();
 
                     using (var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color))
-                    using (var templateImage = Cv2.ImRead($"images/{imagePath}.png", ImreadModes.Color))
+                    using (var templateImage = Cv2.ImRead(imagePath, ImreadModes.Color))
                     {
                         if (mainImage.Empty() || templateImage.Empty())
                         {
-                            Console.WriteLine("Error: Could not load images.");
+                            Utils.Log("Could not load images.", LogType.Error);
                             return null;
                         }
 
@@ -289,22 +327,22 @@ namespace SpaceAdventureBot
                             int centerX = (region?.X ?? 0) + maxLoc.X + templateImage.Width / 2;
                             int centerY = (region?.Y ?? 0) + maxLoc.Y + templateImage.Height / 2;
 
-                            Console.WriteLine($"Match found at: Top-Left={maxLoc}, Center=({centerX}, {centerY}) with confidence {maxVal}");
+                            //Utils.Log($"Match found at: Top-Left={maxLoc}, Center=({centerX}, {centerY}) with confidence {maxVal}", LogType.Info);
                             return new Point(centerX, centerY);
                         }
                     }
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine($"IO Error: {ex.Message}");
+                    Utils.Log(ex.Message, LogType.Warning);
                     if (attempt < maxRetries - 1)
                     {
-                        Console.WriteLine("Retrying...");
+                        Utils.Log("Retrying...", LogType.Warning);
                         Thread.Sleep(delayBetweenRetries);
                     }
                     else
                     {
-                        Console.WriteLine("Max retries reached. Unable to access the file.");
+                        Utils.Log("Max retries reached. Unable to access the file.", LogType.Error);
                         return null;
                     }
                 }
@@ -330,7 +368,7 @@ namespace SpaceAdventureBot
             Point? match = FindMatchOnScreen(referenceImagePath);
             if (match == null) return null;
 
-            using var templateImage = Cv2.ImRead($"images/{referenceImagePath}.png", ImreadModes.Color);
+            using var templateImage = Cv2.ImRead(referenceImagePath, ImreadModes.Color);
             return new Rect(match.Value.X - templateImage.Width / 2, match.Value.Y - templateImage.Height / 2, templateImage.Width, templateImage.Height);
         }
 
@@ -353,6 +391,7 @@ namespace SpaceAdventureBot
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
             {
+                AntiBot();
                 Point? match = FindMatchOnScreen(imagePath, confidenceThreshold, region);
                 if (match != null)
                     return match;
@@ -367,18 +406,19 @@ namespace SpaceAdventureBot
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
             {
-                Point? match = FindMatchOnScreen(templateImagePath, DefaultConfidenceThreshold, scrollRegion);
+                AntiBot();
+                Point? match = FindMatchOnScreen(templateImagePath);
                 if (match != null)
                 {
-                    Console.WriteLine($"Found {templateImagePath} while scrolling.");
+                    Utils.Log($"Found {templateImagePath} while scrolling.", LogType.Success);
                     return true;
                 }
 
-                Console.WriteLine($"Scrolling to find {templateImagePath}...");
-                Device.ScrollUpInRegion(scrollRegion, scrollDistance);
+                Utils.Log($"Scrolling to find {templateImagePath}...", LogType.Info);
+                _device.ScrollUpInRegion(scrollRegion, scrollDistance);
                 Thread.Sleep(500);
             }
-            Console.WriteLine($"Failed to find {templateImagePath} within timeout.");
+            Utils.Log($"Failed to find {templateImagePath} within timeout.", LogType.Warning);
             return false;
         }
 
