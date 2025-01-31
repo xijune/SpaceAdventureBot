@@ -33,34 +33,49 @@ namespace SpaceAdventureBot
         }
 
         /// <summary>
-        /// Takes a screenshot of the device screen.
+        /// Takes a screenshot of the device screen and checks for anti-bot measures.
         /// </summary>
         public void Screenshot()
         {
             const string remotePath = "/sdcard/screenshot.png";
-            try
+
+            ExecuteCommand($"screencap -p {remotePath}");
+            using (SyncService service = new SyncService(AdbClient, DeviceData))
+            using (Stream stream = File.OpenWrite("screenshot.png"))
             {
-                ExecuteCommand($"screencap -p {remotePath}");
-                using (SyncService service = new SyncService(AdbClient, DeviceData))
-                using (Stream stream = File.OpenWrite("screenshot.png"))
+                service.Pull(remotePath, stream, null, CancellationToken.None);
+            }
+
+            // Check for anti-bot measures and tap if found
+            CheckAndTapAntiBot(Constants.AntiBotClose);
+            CheckAndTapAntiBot(Constants.AntiBotClose2);
+        }
+
+        /// <summary>
+        /// Checks for the specified anti-bot measure and taps if found.
+        /// </summary>
+        /// <param name="antiBotImagePath">The path to the anti-bot image.</param>
+        private void CheckAndTapAntiBot(string antiBotImagePath)
+        {
+            using (var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color))
+            using (var templateImage = Cv2.ImRead(antiBotImagePath, ImreadModes.Color))
+            {
+                if (!mainImage.Empty() && !templateImage.Empty())
                 {
-                    service.Pull(remotePath, stream, null, CancellationToken.None);
+                    using (var result = new Mat())
+                    {
+                        Cv2.MatchTemplate(mainImage, templateImage, result, TemplateMatchModes.CCoeffNormed);
+                        Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out Point maxLoc);
+
+                        if (maxVal >= 0.9)
+                        {
+                            int centerX = maxLoc.X + templateImage.Width / 2;
+                            int centerY = maxLoc.Y + templateImage.Height / 2;
+                            Tap(new Point(centerX, centerY));
+                            Thread.Sleep(2000);
+                        }
+                    }
                 }
-            }
-            catch (IOException ex)
-            {
-                Console.WriteLine($"IO Error: {ex.Message}");
-                // Additional logging or handling for IO errors
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Console.WriteLine($"Access Error: {ex.Message}");
-                // Additional logging or handling for access errors
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Unexpected Error: {ex.Message}");
-                // Additional logging or handling for unexpected errors
             }
         }
 
@@ -139,6 +154,16 @@ namespace SpaceAdventureBot
             int startY = region.Y + region.Height - 1;
             int endX = startX;
             int endY = startY - distance;
+
+            ExecuteCommand($"input swipe {startX} {startY} {endX} {endY}");
+        }
+
+        public void ScrollDownInRegion(Rect region, int distance)
+        {
+            int startX = region.X + region.Width / 2;
+            int startY = region.Y;
+            int endX = startX;
+            int endY = startY + distance;
 
             ExecuteCommand($"input swipe {startX} {startY} {endX} {endY}");
         }

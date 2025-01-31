@@ -47,23 +47,35 @@ namespace SpaceAdventureBot
 
         public static void Log(string message, LogType messageType)
         {
+            string prefix = string.Empty;
             switch (messageType)
             {
                 case LogType.Info:
                     Console.ForegroundColor = ConsoleColor.White;
+                    prefix = "[INFO]";
                     break;
                 case LogType.Warning:
                     Console.ForegroundColor = ConsoleColor.Yellow;
+                    prefix = "[WARNING]";
                     break;
                 case LogType.Error:
                     Console.ForegroundColor = ConsoleColor.Red;
+                    prefix = "[ERROR]";
                     break;
                 case LogType.Success:
                     Console.ForegroundColor = ConsoleColor.Green;
+                    prefix = "[SUCCESS]";
                     break;
             }
-            Console.WriteLine($"{DateTime.Now.ToString("G (fr-CH)")} | {message}");
+            Console.WriteLine($"{DateTime.Now.ToString("T")} | {prefix} {message}");
             Console.ResetColor();
+        }
+
+        public static int GetRandomSleepDuration(int min, int max)
+        {
+            Random random = new Random();;
+            int randomMillisecond = random.Next(min * Constants.SleepDurationMultiplier, max * Constants.SleepDurationMultiplier);
+            return randomMillisecond;
         }
     }
 }
