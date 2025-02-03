@@ -58,3 +58,8 @@ C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\obj\Debug\net8.0\refint\SpaceAdven
 C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\obj\Debug\net8.0\SpaceAdventureBot.pdb
 C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\obj\Debug\net8.0\SpaceAdventureBot.genruntimeconfig.cache
 C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\obj\Debug\net8.0\ref\SpaceAdventureBot.dll
+C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\bin\Debug\net8.0\x86\leptonica-1.82.0.dll
+C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\bin\Debug\net8.0\x86\tesseract50.dll
+C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\bin\Debug\net8.0\x64\leptonica-1.82.0.dll
+C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\bin\Debug\net8.0\x64\tesseract50.dll
+C:\MyRepo\SpaceAdventureBot\SpaceAdventureBot\bin\Debug\net8.0\Tesseract.dll

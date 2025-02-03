@@ -1,6 +1,8 @@
 ﻿using OpenCvSharp;
 using SharpAdbClient;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using Tesseract;
 
 namespace SpaceAdventureBot
 {
@@ -35,10 +37,10 @@ namespace SpaceAdventureBot
             _nextTaskResetTime = DateTime.Today.AddHours(22).AddMinutes(10);
             _tasks = new Tasks()
             {
-                IsWatch5AdsCompleted = false,
-                IsAddRocketCompleted = false,
+                IsWatch5AdsCompleted = true,
+                IsAddRocketCompleted = true,
                 IsSpin10TimesCompleted = false,
-                IsAddBountyPlayCompleted = false
+                IsAddBountyPlayCompleted = true
             };
 
             Console.Title = $"Bot Console - {deviceData.Serial}";
@@ -84,6 +86,7 @@ namespace SpaceAdventureBot
         {
             //_device.Screenshot();
             //return;
+
             while (true)
             {
                 try
@@ -135,8 +138,10 @@ namespace SpaceAdventureBot
                         continue;
                     }
 
-                    _isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion, 0.9);
-                    _isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion, 0.91);
+                    _isFuelEmpty = Regex.Replace(ReadTextInRegion(Constants.FuelRegion), @"[\r\n]+", "").Equals("0", StringComparison.OrdinalIgnoreCase);
+                    _isShieldBroken = Regex.Replace(ReadTextInRegion(Constants.ShieldRegion), @"[\r\n]+", "").Equals("0%", StringComparison.OrdinalIgnoreCase);
+                    //_isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion, 0.9);
+                    //_isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion, 0.91);
 
                     CollectCoin();
 
@@ -175,7 +180,7 @@ namespace SpaceAdventureBot
             {
                 if (FindWhileScrollingWithTimeout(Constants.TasksSponsorsWatch5AdsRegion, Constants.TasksScrollRegion, DefaultTimeout))
                 {
-                    Rect? watch5AdsRegion = FindRegionOnScreen(Constants.TasksSponsorsWatch5AdsRegion);
+                    OpenCvSharp.Rect? watch5AdsRegion = FindRegionOnScreen(Constants.TasksSponsorsWatch5AdsRegion);
                     if (watch5AdsRegion != null)
                     {
                         if (FindAndTap(Constants.TasksEnterTask, watch5AdsRegion))
@@ -254,8 +259,11 @@ namespace SpaceAdventureBot
                 {
                     if (FindAndTap(Constants.TasksOurReward))
                     {
-                        if (!CollectAddRocketTask())
-                            return false;
+                        if (!_tasks.IsAddRocketCompleted)
+                        {
+                            if (!CollectAddRocketTask())
+                                return false;
+                        }
 
                         if (!_tasks.IsSpin10TimesCompleted && _spinCount >= 10)
                         {
@@ -438,7 +446,7 @@ namespace SpaceAdventureBot
         private bool LaunchSpaceAdventure()
         {
             Utils.Log("LAUNCH: Launching Space Adventure...", LogType.Info);
-            Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout(Constants.SpaceAdventureRegion, DefaultTimeout);
+            OpenCvSharp.Rect? spaceAdventureRegion = FindRegionOnScreenWithTimeout(Constants.SpaceAdventureRegion, DefaultTimeout);
             if (spaceAdventureRegion != null)
             {
                 if (FindAndTap(Constants.SpaceAdventureOpen, spaceAdventureRegion, 4000))
@@ -457,7 +465,30 @@ namespace SpaceAdventureBot
         private void CollectCoin()
         {
             if (FindAndTap(Constants.HomeCollect))
-                Utils.Log("COIN: Coin collected.", LogType.Success);
+            {
+                if (IsMatchOnScreen(Constants.AntiBotActivityVerification))
+                {
+                    if (FindAndTap(Constants.AntiBotActivityVerificationInput))
+                    {
+                        string verificationCode = Regex.Replace(ReadTextInRegion(Constants.ActivityVerificationCodeRegion), @"[\r\n]+", "");
+                        if (!String.IsNullOrEmpty(verificationCode))
+                        {
+                            _device.InputText(verificationCode);
+                            Utils.Log("COIN: Verification code entered.", LogType.Info);
+                            if (FindAndTap(Constants.AntiBotActivityVerificationConfirm))
+                            {
+                                Utils.Log("COIN: Coin collected.", LogType.Success);
+                            }
+                            else
+                            {
+                                Utils.Log("COIN: Failed to collect coin.", LogType.Error);
+                            }
+                        }
+                    }
+                    else
+                        Utils.Log("COIN: Coin collected.", LogType.Success);
+                }
+            }
         }
 
         private bool Spin()
@@ -519,7 +550,7 @@ namespace SpaceAdventureBot
             return true;
         }
 
-        private bool FindAndTap(string templateImagePath, Rect? region = null, int tapSleepDuration = TapSleepDuration)
+        private bool FindAndTap(string templateImagePath, OpenCvSharp.Rect? region = null, int tapSleepDuration = TapSleepDuration)
         {
             Point? match = FindMatchOnScreen(templateImagePath, DefaultConfidenceThreshold, region);
             if (match == null)
@@ -530,7 +561,7 @@ namespace SpaceAdventureBot
             return true;
         }
 
-        private bool FindAndTapWithTimeout(string templateImagePath, int timeoutMilliseconds, Rect? region = null)
+        private bool FindAndTapWithTimeout(string templateImagePath, int timeoutMilliseconds, OpenCvSharp.Rect? region = null)
         {
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
@@ -543,7 +574,7 @@ namespace SpaceAdventureBot
             return false;
         }
 
-        private Point? FindMatchOnScreen(string imagePath, double confidenceThreshold = DefaultConfidenceThreshold, Rect? region = null)
+        private Point? FindMatchOnScreen(string imagePath, double confidenceThreshold = DefaultConfidenceThreshold, OpenCvSharp.Rect? region = null)
         {
             const int maxRetries = 3;
             const int delayBetweenRetries = 500;
@@ -599,23 +630,23 @@ namespace SpaceAdventureBot
             return null;
         }
 
-        private bool IsMatchOnScreen(string imagePath, Rect? region = null, double confidenceThreshold = DefaultConfidenceThreshold) => FindMatchOnScreen(imagePath, confidenceThreshold, region) != null;
+        private bool IsMatchOnScreen(string imagePath, OpenCvSharp.Rect? region = null, double confidenceThreshold = DefaultConfidenceThreshold) => FindMatchOnScreen(imagePath, confidenceThreshold, region) != null;
 
-        private Rect? FindRegionOnScreen(string referenceImagePath)
+        private OpenCvSharp.Rect? FindRegionOnScreen(string referenceImagePath)
         {
             Point? match = FindMatchOnScreen(referenceImagePath);
             if (match == null) return null;
 
             using var templateImage = Cv2.ImRead(referenceImagePath, ImreadModes.Color);
-            return new Rect(match.Value.X - templateImage.Width / 2, match.Value.Y - templateImage.Height / 2, templateImage.Width, templateImage.Height);
+            return new OpenCvSharp.Rect(match.Value.X - templateImage.Width / 2, match.Value.Y - templateImage.Height / 2, templateImage.Width, templateImage.Height);
         }
 
-        private Rect? FindRegionOnScreenWithTimeout(string referenceImagePath, int timeoutMilliseconds)
+        private OpenCvSharp.Rect? FindRegionOnScreenWithTimeout(string referenceImagePath, int timeoutMilliseconds)
         {
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
             {
-                Rect? region = FindRegionOnScreen(referenceImagePath);
+                OpenCvSharp.Rect? region = FindRegionOnScreen(referenceImagePath);
                 if (region != null)
                     return region;
 
@@ -624,7 +655,7 @@ namespace SpaceAdventureBot
             return null;
         }
 
-        private Point? FindMatchOnScreenWithTimeout(string imagePath, int timeoutMilliseconds, double confidenceThreshold = DefaultConfidenceThreshold, Rect? region = null)
+        private Point? FindMatchOnScreenWithTimeout(string imagePath, int timeoutMilliseconds, double confidenceThreshold = DefaultConfidenceThreshold, OpenCvSharp.Rect? region = null)
         {
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
@@ -638,7 +669,7 @@ namespace SpaceAdventureBot
             return null;
         }
 
-        private bool FindWhileScrollingWithTimeout(string templateImagePath, Rect scrollRegion, int timeoutMilliseconds, int scrollDistance = 500, ScrollType scrollType = ScrollType.Up)
+        private bool FindWhileScrollingWithTimeout(string templateImagePath, OpenCvSharp.Rect scrollRegion, int timeoutMilliseconds, int scrollDistance = 500, ScrollType scrollType = ScrollType.Up)
         {
             DateTime startTime = DateTime.Now;
             while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMilliseconds)
@@ -710,7 +741,7 @@ namespace SpaceAdventureBot
         {
             if (FindWhileScrollingWithTimeout(taskRegion, Constants.TasksScrollRegion, DefaultTimeout))
             {
-                Rect? taskRegionRect = FindRegionOnScreen(taskRegion);
+                OpenCvSharp.Rect? taskRegionRect = FindRegionOnScreen(taskRegion);
                 if (taskRegionRect != null)
                 {
                     if (FindAndTap(taskEnter, taskRegionRect))
@@ -757,5 +788,58 @@ namespace SpaceAdventureBot
                 return false;
             }
         }
+
+        public string ReadTextInRegion(OpenCvSharp.Rect region)
+        {
+            _device.Screenshot();
+            string screenshotPath = $"screenshot-{_device.DeviceData.Serial}.png";
+            string tempImagePath = $"region-{_device.DeviceData.Serial}.png";
+
+            try
+            {
+                using (var mainImage = new Mat(screenshotPath, ImreadModes.Color))
+                using (var regionImage = new Mat(mainImage, region))
+                {
+                    // Preprocess the image: convert to grayscale, apply thresholding, and resize
+                    Cv2.CvtColor(regionImage, regionImage, ColorConversionCodes.BGR2GRAY);
+                    Cv2.Threshold(regionImage, regionImage, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+                    Cv2.Resize(regionImage, regionImage, new OpenCvSharp.Size(regionImage.Width * 2, regionImage.Height * 2), 0, 0, InterpolationFlags.Linear);
+
+                    regionImage.SaveImage(tempImagePath);
+
+                    // Set the TESSDATA_PREFIX environment variable
+                    string tessdataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
+                    Environment.SetEnvironmentVariable("TESSDATA_PREFIX", tessdataPath);
+
+                    using (var engine = new TesseractEngine(tessdataPath, "eng", EngineMode.Default))
+                    {
+                        // Set Tesseract configuration options
+                        engine.SetVariable("tessedit_char_whitelist", "0123456789%"); // Adjust the whitelist based on expected characters
+                        engine.DefaultPageSegMode = PageSegMode.SingleBlock;
+
+                        using (var img = Pix.LoadFromFile(tempImagePath))
+                        using (var page = engine.Process(img))
+                        {
+                            return page.GetText();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"Error reading text in region: {ex.Message}", LogType.Error);
+                return string.Empty;
+            }
+            finally
+            {
+                // Clean up the temporary image file
+                //if (File.Exists(tempImagePath))
+                //{
+                //    File.Delete(tempImagePath);
+                //}
+            }
+        }
+
+
     }
 }

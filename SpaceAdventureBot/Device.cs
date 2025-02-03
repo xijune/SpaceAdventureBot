@@ -49,6 +49,7 @@ namespace SpaceAdventureBot
             // Check for anti-bot measures and tap if found
             CheckAndTapAntiBot(Constants.AntiBotClose);
             CheckAndTapAntiBot(Constants.AntiBotClose2);
+            CheckAndTapAntiBot(Constants.AntiBotClose3);
         }
 
         /// <summary>
@@ -166,6 +167,30 @@ namespace SpaceAdventureBot
             int endY = startY + distance;
 
             ExecuteCommand($"input swipe {startX} {startY} {endX} {endY}");
+        }
+
+        /// <summary>
+        /// Inputs text on the device.
+        /// </summary>
+        /// <param name="text">The text to input.</param>
+        public void InputText(string text)
+        {
+            // Escape special characters for the ADB input command
+            string escapedText = text.Replace(" ", "%s")
+                                     .Replace("\"", "\\\"")
+                                     .Replace("&", "\\&")
+                                     .Replace("|", "\\|")
+                                     .Replace(">", "\\>")
+                                     .Replace("<", "\\<")
+                                     .Replace(";", "\\;")
+                                     .Replace("(", "\\(")
+                                     .Replace(")", "\\)")
+                                     .Replace("$", "\\$")
+                                     .Replace("`", "\\`")
+                                     .Replace("\\", "\\\\")
+                                     .Replace("'", "\\'");
+
+            ExecuteCommand($"input text \"{escapedText}\"");
         }
     }
 }

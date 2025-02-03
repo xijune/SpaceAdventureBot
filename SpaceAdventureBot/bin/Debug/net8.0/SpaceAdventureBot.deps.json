@@ -12,7 +12,8 @@
           "Microsoft.ML.FastTree": "4.0.1",
           "OpenCvSharp4": "4.10.0.20241108",
           "OpenCvSharp4.runtime.win": "4.10.0.20241108",
-          "SharpAdbClient": "2.3.23"
+          "SharpAdbClient": "2.3.23",
+          "Tesseract": "5.2.0"
         },
         "runtime": {
           "SpaceAdventureBot.dll": {}
@@ -319,9 +320,21 @@
           }
         }
       },
+      "System.Reflection.Emit/4.7.0": {},
       "System.Reflection.Emit.Lightweight/4.7.0": {},
       "System.Runtime.CompilerServices.Unsafe/6.0.0": {},
-      "System.Threading.Channels/8.0.0": {}
+      "System.Threading.Channels/8.0.0": {},
+      "Tesseract/5.2.0": {
+        "dependencies": {
+          "System.Reflection.Emit": "4.7.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Tesseract.dll": {
+            "assemblyVersion": "5.2.0.0",
+            "fileVersion": "5.2.0.0"
+          }
+        }
+      }
     }
   },
   "libraries": {
@@ -449,6 +462,13 @@
       "path": "system.numerics.tensors/8.0.0",
       "hashPath": "system.numerics.tensors.8.0.0.nupkg.sha512"
     },
+    "System.Reflection.Emit/4.7.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VR4kk8XLKebQ4MZuKuIni/7oh+QGFmZW3qORd1GvBq/8026OpW501SzT/oypwiQl4TvT8ErnReh/NzY9u+C6wQ==",
+      "path": "system.reflection.emit/4.7.0",
+      "hashPath": "system.reflection.emit.4.7.0.nupkg.sha512"
+    },
     "System.Reflection.Emit.Lightweight/4.7.0": {
       "type": "package",
       "serviceable": true,
@@ -469,6 +489,13 @@
       "sha512": "sha512-CMaFr7v+57RW7uZfZkPExsPB6ljwzhjACWW1gfU35Y56rk72B/Wu+sTqxVmGSk4SFUlPc3cjeKND0zktziyjBA==",
       "path": "system.threading.channels/8.0.0",
       "hashPath": "system.threading.channels.8.0.0.nupkg.sha512"
+    },
+    "Tesseract/5.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-YB7feJlrTWSXtK8+WaCcseGSPK/1r2d2FWeKGyndlrPwYClrzTlCoHD4/oQEUjKafmpkWlhTZZ7pxiRJYZgj6w==",
+      "path": "tesseract/5.2.0",
+      "hashPath": "tesseract.5.2.0.nupkg.sha512"
     }
   }
 }

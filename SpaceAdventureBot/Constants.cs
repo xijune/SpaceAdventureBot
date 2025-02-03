@@ -8,11 +8,12 @@ namespace SpaceAdventureBot
 
         public const string TelegramPackageName = "org.telegram.messenger";
         public const string TelegramMainActivity = "org.telegram.ui.LaunchActivity";
-        public static readonly Rect ShieldRegion = new Rect { X = 1072, Y = 383, Width = 63, Height = 222 };
-        public static readonly Rect FuelRegion = new Rect { X = 479, Y = 371, Width = 116, Height = 245 };
+        public static readonly Rect ShieldRegion = new Rect { X = 1080, Y = 383, Width = 70, Height = 70 };
+        public static readonly Rect FuelRegion = new Rect { X = 460, Y = 380, Width = 120, Height = 50 };
         public static readonly Rect DailyActivityScrollRegion = new Rect { X = 567, Y = 538, Width = 419, Height = 289 };
         public static readonly Rect TasksScrollRegion = new Rect { X = 549, Y = 203, Width = 446, Height = 447 };
 
+        public static readonly Rect ActivityVerificationCodeRegion = new Rect { X = 760, Y = 500, Width = 80, Height = 25 };
 
         // Image paths
         public const string SpaceAdventureRegion = "images/SpaceAdventureChat.png";
@@ -24,6 +25,10 @@ namespace SpaceAdventureBot
 
         public const string AntiBotClose = "images/AntiBot/CloseBtn.png";
         public const string AntiBotClose2 = "images/AntiBot/CloseBtn2.png";
+        public const string AntiBotClose3 = "images/AntiBot/CloseBtn3.png";
+        public const string AntiBotActivityVerification = "images/AntiBot/ActivityVerificationLbl.png";
+        public const string AntiBotActivityVerificationConfirm = "images/AntiBot/ActivityVerificationConfirmBtn.png";
+        public const string AntiBotActivityVerificationInput = "images/AntiBot/ActivityVerificationInputRegion.png";
 
         public const string DailyAdDoubleReward = "images/DailyActivity/AdDoubleRewardBtn.png";
         public const string DailyClose = "images/DailyActivity/CloseBtn.png";

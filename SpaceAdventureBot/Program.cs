@@ -48,6 +48,9 @@ class Program
 
                 Process.Start(startInfo);
                 Utils.Log($"Started new console window for device {o.Serial}", LogType.Info);
+
+                //Bot bot = new(new(), o);
+                //bot.Start();
             });
         }
     }

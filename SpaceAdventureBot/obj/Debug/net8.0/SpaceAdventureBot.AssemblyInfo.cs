@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SpaceAdventureBot")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca42e6479015ad17bb51d296388e080fa5b0972b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a880b4fa52b85ef6633e25404b39723b78c8100")]
 [assembly: System.Reflection.AssemblyProductAttribute("SpaceAdventureBot")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SpaceAdventureBot")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
