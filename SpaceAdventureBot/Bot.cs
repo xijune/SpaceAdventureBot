@@ -253,7 +253,7 @@ namespace SpaceAdventureBot
 
         private bool OurReward()
         {
-            if (!_tasks.IsSpin10TimesCompleted || !_tasks.IsAddRocketCompleted || !_tasks.IsAddBountyPlayCompleted)
+            if ((!_tasks.IsSpin10TimesCompleted && _spinCount >= 10) || !_tasks.IsAddRocketCompleted || !_tasks.IsAddBountyPlayCompleted)
             {
                 if (FindWhileScrollingWithTimeout(Constants.TasksOurReward, Constants.TasksScrollRegion, DefaultTimeout, scrollType: ScrollType.Down))
                 {
