@@ -41,7 +41,7 @@ namespace SpaceAdventureBot
 
             ExecuteCommand($"screencap -p {remotePath}");
             using (SyncService service = new SyncService(AdbClient, DeviceData))
-            using (Stream stream = File.OpenWrite("screenshot.png"))
+            using (Stream stream = File.OpenWrite($"screenshot-{DeviceData.Serial}.png"))
             {
                 service.Pull(remotePath, stream, null, CancellationToken.None);
             }
@@ -57,7 +57,7 @@ namespace SpaceAdventureBot
         /// <param name="antiBotImagePath">The path to the anti-bot image.</param>
         private void CheckAndTapAntiBot(string antiBotImagePath)
         {
-            using (var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color))
+            using (var mainImage = Cv2.ImRead($"screenshot-{DeviceData.Serial}.png", ImreadModes.Color))
             using (var templateImage = Cv2.ImRead(antiBotImagePath, ImreadModes.Color))
             {
                 if (!mainImage.Empty() && !templateImage.Empty())

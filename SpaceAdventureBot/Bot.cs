@@ -35,14 +35,12 @@ namespace SpaceAdventureBot
             _nextTaskResetTime = DateTime.Today.AddHours(22).AddMinutes(10);
             _tasks = new Tasks()
             {
-                IsWatch5AdsCompleted = true,
-                IsAddRocketCompleted = true,
+                IsWatch5AdsCompleted = false,
+                IsAddRocketCompleted = false,
                 IsSpin10TimesCompleted = false,
                 IsAddBountyPlayCompleted = false
             };
 
-            // Allocate a new console for this bot instance
-            AllocConsole();
             Console.Title = $"Bot Console - {deviceData.Serial}";
         }
 
@@ -84,8 +82,8 @@ namespace SpaceAdventureBot
 
         public void Start()
         {
-
-
+            //_device.Screenshot();
+            //return;
             while (true)
             {
                 try
@@ -148,7 +146,7 @@ namespace SpaceAdventureBot
                         continue;
                     }
 
-                    //Tasks();
+                    Tasks();
 
                     Utils.Log("Closing Telegram...", LogType.Info);
                     _device.CloseApp(Constants.TelegramPackageName);
@@ -259,15 +257,16 @@ namespace SpaceAdventureBot
                         if (!CollectAddRocketTask())
                             return false;
 
-
-                        if (!_tasks.IsSpin10TimesCompleted)
+                        if (!_tasks.IsSpin10TimesCompleted && _spinCount >= 10)
                         {
-
+                            if (!CollectSpin10TimesTask())
+                                return false;
                         }
 
                         if (!_tasks.IsAddBountyPlayCompleted)
                         {
-
+                            if (!CollectAddBountyPlayTask())
+                                return false;
                         }
                     }
                 }
@@ -275,60 +274,28 @@ namespace SpaceAdventureBot
             return true;
         }
 
+        private bool CollectAddBountyPlayTask()
+        {
+            bool isAddBountyPlayCompleted = _tasks.IsAddBountyPlayCompleted;
+            bool result = CollectTaskReward(Constants.TasksOurAddBountyPlayRegion, Constants.TasksEnterTask, Constants.TasksCheck, ref isAddBountyPlayCompleted);
+            _tasks.IsAddBountyPlayCompleted = isAddBountyPlayCompleted;
+            return result;
+        }
+
+        private bool CollectSpin10TimesTask()
+        {
+            bool isSpin10TimesCompleted = _tasks.IsSpin10TimesCompleted;
+            bool result = CollectTaskReward(Constants.TasksOurSpin10TimesRegion, Constants.TasksEnterTask, Constants.TasksCheck, ref isSpin10TimesCompleted);
+            _tasks.IsSpin10TimesCompleted = isSpin10TimesCompleted;
+            return result;
+        }
+
         private bool CollectAddRocketTask()
         {
-            if (!_tasks.IsAddRocketCompleted)
-            {
-                if (FindWhileScrollingWithTimeout(Constants.TasksOurAddRocketRegion, Constants.TasksScrollRegion, DefaultTimeout))
-                {
-                    Rect? addRocketRegion = FindRegionOnScreen(Constants.TasksOurAddRocketRegion);
-                    if (addRocketRegion != null)
-                    {
-                        if (FindAndTap(Constants.TasksEnterTask, addRocketRegion))
-                        {
-                            if (FindWhileScrollingWithTimeout(Constants.TasksCheck, Constants.TasksScrollRegion, DefaultTimeout))
-                            {
-                                if (FindAndTap(Constants.TasksCheck))
-                                {
-                                    Utils.Log("TASKS: Reward successfuly collected !.", LogType.Success);
-                                    return true;
-                                }
-                                else
-                                {
-                                    Utils.Log("TASKS: Failed to check the task.", LogType.Warning);
-                                    if (!FindAndTap(Constants.TasksClose))
-                                    {
-                                        Utils.Log("TASKS: Failed to close the task.", LogType.Warning);
-                                    }
-                                    return false;
-                                }
-
-                            }
-                            else
-                            {
-                                Utils.Log("TASKS: Failed to find check button.", LogType.Warning);
-                                return false;
-                            }
-                        }
-                        else
-                        {
-                            Utils.Log("TASKS: Failed to enter the task.", LogType.Warning);
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        Utils.Log("TASKS: Failed to find add rocket task.", LogType.Warning);
-                        return false;
-                    }
-                }
-                else
-                {
-                    Utils.Log("TASKS: Failed to find add rocket task.", LogType.Warning);
-                    return false;
-                }
-            }
-            return true;
+            bool isAddRocketCompleted = _tasks.IsAddRocketCompleted;
+            bool result = CollectTaskReward(Constants.TasksOurAddRocketRegion, Constants.TasksEnterTask, Constants.TasksCheck, ref isAddRocketCompleted);
+            _tasks.IsAddRocketCompleted = isAddRocketCompleted;
+            return result;
         }
 
         private bool Tasks()
@@ -342,26 +309,6 @@ namespace SpaceAdventureBot
                     Watch5Ads();
 
                     OurReward();
-
-                    //// Add bounty play
-                    //if (!_tasks.IsAddBountyPlayCompleted)
-                    //{
-                    //    if (FindWhileScrollingWithTimeout(Constants.TasksOurAddBountyPlayRegion, TODO, DefaultTimeout))
-                    //    {
-                    //        if (FindAndTap(Constants.TasksEnterTask, TODO))
-                    //        {
-                    //        }
-                    //        else
-                    //        {
-                    //            Utils.Log("TASKS: Failed to enter the task.", LogType.Warning);
-                    //        }
-                    //    }
-                    //    else
-                    //    {
-                    //        Utils.Log("TASKS: Failed to find watch 5 ads task.", LogType.Warning);
-                    //    }
-                    //}
-
 
                     if (FindAndTap(Constants.NavHome))
                         Utils.Log("TASKS: Navigated to home.", LogType.Info);
@@ -607,7 +554,7 @@ namespace SpaceAdventureBot
                 {
                     _device.Screenshot();
 
-                    using (var mainImage = Cv2.ImRead("screenshot.png", ImreadModes.Color))
+                    using (var mainImage = Cv2.ImRead($"screenshot-{_device.DeviceData.Serial}.png", ImreadModes.Color))
                     using (var templateImage = Cv2.ImRead(imagePath, ImreadModes.Color))
                     {
                         if (mainImage.Empty() || templateImage.Empty())
@@ -758,6 +705,57 @@ namespace SpaceAdventureBot
             int sleepHour = random.Next(0, 24);
             int sleepMinute = random.Next(0, 60);
             return DateTime.Today.AddHours(sleepHour).AddMinutes(sleepMinute);
+        }
+        private bool CollectTaskReward(string taskRegion, string taskEnter, string taskCheck, ref bool taskCompleted)
+        {
+            if (FindWhileScrollingWithTimeout(taskRegion, Constants.TasksScrollRegion, DefaultTimeout))
+            {
+                Rect? taskRegionRect = FindRegionOnScreen(taskRegion);
+                if (taskRegionRect != null)
+                {
+                    if (FindAndTap(taskEnter, taskRegionRect))
+                    {
+                        if (FindWhileScrollingWithTimeout(taskCheck, Constants.TasksScrollRegion, DefaultTimeout))
+                        {
+                            if (FindAndTap(taskCheck))
+                            {
+                                Utils.Log("TASKS: Reward successfully collected!", LogType.Success);
+                                taskCompleted = true;
+                                return true;
+                            }
+                            else
+                            {
+                                Utils.Log("TASKS: Failed to check the task.", LogType.Warning);
+                                if (!FindAndTap(Constants.TasksClose))
+                                {
+                                    Utils.Log("TASKS: Failed to close the task.", LogType.Warning);
+                                }
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            Utils.Log("TASKS: Failed to find check button.", LogType.Warning);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        Utils.Log("TASKS: Failed to enter the task.", LogType.Warning);
+                        return false;
+                    }
+                }
+                else
+                {
+                    Utils.Log($"TASKS: Failed to find {taskRegion} task.", LogType.Warning);
+                    return false;
+                }
+            }
+            else
+            {
+                Utils.Log($"TASKS: Failed to find {taskRegion} task.", LogType.Warning);
+                return false;
+            }
         }
     }
 }

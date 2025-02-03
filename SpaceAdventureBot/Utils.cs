@@ -11,6 +11,12 @@ namespace SpaceAdventureBot
             return adbClient.GetDevices();
         }
 
+        public static DeviceData GetDeviceBySerial(string serial)
+        {
+            List<DeviceData> devices = GetDevices();
+            return devices.FirstOrDefault(d => d.Serial == serial);
+        }
+
         public static async void StartAdbServer(bool restartServer = false)
         {
             AdbServer server = new AdbServer();
