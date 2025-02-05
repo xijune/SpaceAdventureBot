@@ -37,10 +37,10 @@ namespace SpaceAdventureBot
             _nextTaskResetTime = DateTime.Today.AddHours(22).AddMinutes(10);
             _tasks = new Tasks()
             {
-                IsWatch5AdsCompleted = true,
-                IsAddRocketCompleted = true,
+                IsWatch5AdsCompleted = false,
+                IsAddRocketCompleted = false,
                 IsSpin10TimesCompleted = false,
-                IsAddBountyPlayCompleted = true
+                IsAddBountyPlayCompleted = false
             };
 
             Console.Title = $"Bot Console - {deviceData.Serial}";
@@ -82,10 +82,29 @@ namespace SpaceAdventureBot
                 Utils.Log("DAILY: No daily activity found.", LogType.Info);
         }
 
+        private bool AskQuestion(string question)
+        {
+            Console.Write(question);
+            string? answer = Console.ReadLine();
+            switch (answer)
+            {
+                case "y":
+                case "Y":
+                    return true;
+                case "n":
+                case "N":
+                    return false;
+                default:
+                    return AskQuestion(question);
+            }
+        }
+
         public void Start()
         {
-            //_device.Screenshot();
-            //return;
+            _tasks.IsWatch5AdsCompleted = AskQuestion("Is watch 5 ads task completed? (y/n) ");
+            _tasks.IsAddRocketCompleted = AskQuestion("Is add rocket task completed? (y/n) ");
+            _tasks.IsSpin10TimesCompleted = AskQuestion("Is spin 10 times task completed? (y/n) ");
+            _tasks.IsAddBountyPlayCompleted = AskQuestion("Is add bounty play task completed? (y/n) ");
 
             while (true)
             {
@@ -132,16 +151,21 @@ namespace SpaceAdventureBot
                             Utils.Log("Navigated to home page.", LogType.Success);
                     }
 
+                    string fuel = Regex.Replace(ReadTextInRegion(Constants.FuelRegion), @"[\r\n]+", "");
+                    Utils.Log($"Fuel: {fuel}", LogType.Info);
+                    _isFuelEmpty = fuel.Equals("0", StringComparison.OrdinalIgnoreCase);
+
+                    string shield = Regex.Replace(ReadTextInRegion(Constants.ShieldRegion), @"[\r\n]+", "");
+                    Utils.Log($"Shield: {shield}", LogType.Info);
+                    _isShieldBroken = shield.Equals("0%", StringComparison.OrdinalIgnoreCase);
+                    //_isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion, 0.9);
+                    //_isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion, 0.91);
+
                     if (!Spin())
                     {
                         _device.CloseApp(Constants.TelegramPackageName);
                         continue;
                     }
-
-                    _isFuelEmpty = Regex.Replace(ReadTextInRegion(Constants.FuelRegion), @"[\r\n]+", "").Equals("0", StringComparison.OrdinalIgnoreCase);
-                    _isShieldBroken = Regex.Replace(ReadTextInRegion(Constants.ShieldRegion), @"[\r\n]+", "").Equals("0%", StringComparison.OrdinalIgnoreCase);
-                    //_isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion, 0.9);
-                    //_isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion, 0.91);
 
                     CollectCoin();
 
@@ -308,7 +332,7 @@ namespace SpaceAdventureBot
 
         private bool Tasks()
         {
-            if (!_tasks.IsSpin10TimesCompleted || !_tasks.IsAddRocketCompleted || !_tasks.IsAddBountyPlayCompleted || !_tasks.IsWatch5AdsCompleted)
+            if ((!_tasks.IsSpin10TimesCompleted && _spinCount >= 10) || !_tasks.IsAddRocketCompleted || !_tasks.IsAddBountyPlayCompleted || !_tasks.IsWatch5AdsCompleted)
             {
                 if (FindAndTap(Constants.NavTasks))
                 {
@@ -485,9 +509,9 @@ namespace SpaceAdventureBot
                             }
                         }
                     }
-                    else
-                        Utils.Log("COIN: Coin collected.", LogType.Success);
                 }
+                else
+                    Utils.Log("COIN: Coin collected.", LogType.Success);
             }
         }
 
