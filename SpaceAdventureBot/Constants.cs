@@ -8,8 +8,8 @@ namespace SpaceAdventureBot
 
         public const string TelegramPackageName = "org.telegram.messenger";
         public const string TelegramMainActivity = "org.telegram.ui.LaunchActivity";
-        public static readonly Rect ShieldRegion = new Rect { X = 1060, Y = 380, Width = 80, Height = 50 };
-        public static readonly Rect FuelRegion = new Rect { X = 460, Y = 380, Width = 120, Height = 50 };
+        public static readonly Rect ShieldRegion = new Rect { X = 1055, Y = 390, Width = 100, Height = 30 };
+        public static readonly Rect FuelRegion = new Rect { X = 440, Y = 390, Width = 120, Height = 30 };
         public static readonly Rect DailyActivityScrollRegion = new Rect { X = 567, Y = 538, Width = 419, Height = 289 };
         public static readonly Rect TasksScrollRegion = new Rect { X = 549, Y = 203, Width = 446, Height = 447 };
 

@@ -151,15 +151,13 @@ namespace SpaceAdventureBot
                             Utils.Log("Navigated to home page.", LogType.Success);
                     }
 
-                    string fuel = Regex.Replace(ReadTextInRegion(Constants.FuelRegion), @"[\r\n]+", "");
+                    string fuel = Regex.Replace(ReadTextInRegion(Constants.FuelRegion), @"[\s\r\n]+", "");
                     Utils.Log($"Fuel: {fuel}", LogType.Info);
                     _isFuelEmpty = fuel.Equals("0", StringComparison.OrdinalIgnoreCase);
 
-                    string shield = Regex.Replace(ReadTextInRegion(Constants.ShieldRegion), @"[\r\n]+", "");
+                    string shield = Regex.Replace(ReadTextInRegion(Constants.ShieldRegion), @"[\s\r\n]+", "");
                     Utils.Log($"Shield: {shield}", LogType.Info);
                     _isShieldBroken = shield.Equals("0%", StringComparison.OrdinalIgnoreCase);
-                    //_isFuelEmpty = IsMatchOnScreen(Constants.HomeEmptyFuel, Constants.FuelRegion, 0.9);
-                    //_isShieldBroken = IsMatchOnScreen(Constants.HomeBrokenShield, Constants.ShieldRegion, 0.91);
 
                     if (!Spin())
                     {
@@ -180,13 +178,13 @@ namespace SpaceAdventureBot
                     Utils.Log("Closing Telegram...", LogType.Info);
                     _device.CloseApp(Constants.TelegramPackageName);
 
-                    //if (DateTime.Now >= _nextSleepTime)
-                    //{
-                    //    Utils.Log("Bot is going to sleep...", LogType.Info);
-                    //    int sleepDuration = Utils.GetRandomSleepDuration(240, 360);
-                    //    CountdownSleep(sleepDuration);
-                    //    _nextSleepTime = GetNextSleepTime();
-                    //}
+                    if (DateTime.Now >= _nextSleepTime)
+                    {
+                        Utils.Log("Bot is going to sleep...", LogType.Info);
+                        int sleepDuration = Utils.GetRandomSleepDuration(240, 360);
+                        CountdownSleep(sleepDuration);
+                        _nextSleepTime = GetNextSleepTime();
+                    }
 
                     CountdownSleep(Utils.GetRandomSleepDuration(10, 14));
                 }
@@ -658,7 +656,7 @@ namespace SpaceAdventureBot
 
         private OpenCvSharp.Rect? FindRegionOnScreen(string referenceImagePath)
         {
-            Point? match = FindMatchOnScreen(referenceImagePath);
+            Point? match = FindMatchOnScreen(referenceImagePath, confidenceThreshold: 0.9);
             if (match == null) return null;
 
             using var templateImage = Cv2.ImRead(referenceImagePath, ImreadModes.Color);
@@ -757,13 +755,13 @@ namespace SpaceAdventureBot
         private DateTime GetNextSleepTime()
         {
             Random random = new Random();
-            int sleepHour = random.Next(0, 24);
+            int sleepHour = random.Next(20, 24);
             int sleepMinute = random.Next(0, 60);
             return DateTime.Today.AddHours(sleepHour).AddMinutes(sleepMinute);
         }
         private bool CollectTaskReward(string taskRegion, string taskEnter, string taskCheck, ref bool taskCompleted)
         {
-            if (FindWhileScrollingWithTimeout(taskRegion, Constants.TasksScrollRegion, DefaultTimeout))
+            if (FindWhileScrollingWithTimeout(taskRegion, Constants.TasksScrollRegion, DefaultTimeout, scrollDistance: 250))
             {
                 OpenCvSharp.Rect? taskRegionRect = FindRegionOnScreen(taskRegion);
                 if (taskRegionRect != null)
@@ -824,8 +822,10 @@ namespace SpaceAdventureBot
                 using (var mainImage = new Mat(screenshotPath, ImreadModes.Color))
                 using (var regionImage = new Mat(mainImage, region))
                 {
-                    // Preprocess the image: convert to grayscale, apply thresholding, and resize
-                    Cv2.CvtColor(regionImage, regionImage, ColorConversionCodes.BGR2GRAY);
+                    // Preprocess the image to isolate white text
+                    Cv2.InRange(regionImage, new Scalar(200, 200, 200), new Scalar(255, 255, 255), regionImage);
+                    Cv2.CvtColor(regionImage, regionImage, ColorConversionCodes.GRAY2BGR);
+                    Cv2.CvtColor(regionImage, regionImage, ColorConversionCodes.BGR2GRAY); // Convert to grayscale
                     Cv2.Threshold(regionImage, regionImage, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
                     Cv2.Resize(regionImage, regionImage, new OpenCvSharp.Size(regionImage.Width * 2, regionImage.Height * 2), 0, 0, InterpolationFlags.Linear);
 
@@ -856,7 +856,7 @@ namespace SpaceAdventureBot
             }
             finally
             {
-                // Clean up the temporary image file
+                //// Clean up the temporary image file
                 //if (File.Exists(tempImagePath))
                 //{
                 //    File.Delete(tempImagePath);
